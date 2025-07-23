@@ -1,5 +1,7 @@
 #include "tiltrotor.h"
 #include "Plane.h"
+#include <GCS_MAVLink/GCS_MAVLink.h>
+
 
 #if HAL_QUADPLANE_ENABLED
 const AP_Param::GroupInfo Tiltrotor::var_info[] = {
@@ -81,6 +83,17 @@ const AP_Param::GroupInfo Tiltrotor::var_info[] = {
     // @Range: 0 15
     // @User: Standard
     AP_GROUPINFO("WING_FLAP", 10, Tiltrotor, flap_angle_deg, 0),
+
+    // @Param: SLEW_RATE
+    // @DisplayName: Tiltrotor motor slew rate (AUTO takeoff)
+    // @Description: Maximum rate of change for tiltrotor motor outputs during AUTO takeoff. 
+    //               Units are PWM output value per second. Set to 0 to disable slew limiting.
+    // @Units: PWM/s
+    // @Increment: 1
+    // @Range: 0 10000
+    // @User: Standard
+    AP_GROUPINFO("SLEW_RATE", 11, Tiltrotor, slew_rate, 0),
+
 
     AP_GROUPEND
 };
@@ -248,8 +261,48 @@ void Tiltrotor::continuous_update(void)
             const uint32_t mask = is_zero(current_throttle) ? 0U : tilt_mask.get();
             motors->output_motor_mask(current_throttle, mask, plane.rudder_dt);
         }
-        return;
+
+
+
+
+         bool auto_takeoff = (plane.control_mode == &plane.mode_auto) &&
+                    plane.mission.get_current_nav_cmd().id == MAV_CMD_NAV_TAKEOFF &&
+                    (slew_rate.get() > 0);
+
+    if (auto_takeoff) {
+        float dt = plane.G_Dt;
+        float max_delta = slew_rate.get() * dt;  // max PWM change this loop
+
+        // Loop through all motors in the tiltrotor mask
+        uint16_t pwm_current;
+        for (uint8_t i = 0; i < AP_MOTORS_MAX_NUM_MOTORS; i++) {
+            if ((uint16_t)tilt_mask.get() & (1U << i)) {  // if this motor is tiltable
+                // Get current output PWM for motor i
+                if (SRV_Channels::get_output_pwm((SRV_Channel::Function)(SRV_Channel::k_motor1 + i), pwm_current)) {
+                    float prev = motor_prev[i];
+                    float current = (float)pwm_current;
+                    if (fabsf(prev) < 1e-3f && current > 0.0f){
+                        // Initialize prev to current to avoid large initial jump (e.g. from disarmed to spin)
+                        prev = current;
+                    }
+                    // Limit the change
+                    float delta = current - prev;
+                    if (delta > max_delta) {
+                        current = prev + max_delta;
+                    } else if (delta < -max_delta) {
+                        current = prev - max_delta;
+                    }
+                    // Update the output to the limited value
+                    SRV_Channels::set_output_pwm((SRV_Channel::Function)(SRV_Channel::k_motor1 + i), (uint16_t)current);
+                    motor_prev[i] = current;
+                }
+            }
+        }
     }
+
+
+        return;
+}
 
     // remember the throttle level we're using for VTOL flight
     float motors_throttle = motors->get_throttle();

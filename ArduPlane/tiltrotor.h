@@ -17,6 +17,8 @@
 #include <AP_Param/AP_Param.h>
 #include "transition.h"
 #include <AP_Logger/LogStructure.h>
+#include "AP_Motors/AP_Motors_Class.h"
+
 
 class QuadPlane;
 class AP_MotorsMulticopter;
@@ -86,6 +88,8 @@ public:
     AP_Float fixed_angle;
     AP_Float fixed_gain;
     AP_Float flap_angle_deg;
+    AP_Float slew_rate;
+
 
     float current_tilt;
     float current_throttle;
@@ -93,6 +97,8 @@ public:
     float transition_yaw_cd;
     uint32_t transition_yaw_set_ms;
     bool _is_vectored;
+    float motor_prev[AP_MOTORS_MAX_NUM_MOTORS] {};
+
 
     // types of tilt mechanisms
     enum {TILT_TYPE_CONTINUOUS    =0,
