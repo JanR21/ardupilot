@@ -84,7 +84,7 @@ const AP_Param::GroupInfo Tiltrotor::var_info[] = {
     // @User: Standard
     AP_GROUPINFO("WING_FLAP", 10, Tiltrotor, flap_angle_deg, 0),
 
-    // @Param: SLEW_RATE
+    // @Param: SLEW_RATE_TIME
     // @DisplayName: Tiltrotor motor slew rate (AUTO takeoff)
     // @Description: Maximum rate of change for tiltrotor motor outputs during AUTO takeoff. 
     //               Units are PWM output value per second. Set to 0 to disable slew limiting.
@@ -92,7 +92,7 @@ const AP_Param::GroupInfo Tiltrotor::var_info[] = {
     // @Increment: 1
     // @Range: 0 10000
     // @User: Standard
-    AP_GROUPINFO("SLEW_RATE", 11, Tiltrotor, slew_rate, 0),
+    AP_GROUPINFO("SLEW_RATE_TIME", 11, Tiltrotor, slew_rate_time, 0),
 
 
     AP_GROUPEND
@@ -243,66 +243,47 @@ void Tiltrotor::continuous_update(void)
         max_change = tilt_max_change(false);
 
         float new_throttle = constrain_float(SRV_Channels::get_output_scaled(SRV_Channel::k_throttle)*0.01, 0, 1);
-        if (current_tilt < get_fully_forward_tilt()) {
-            current_throttle = constrain_float(new_throttle,
-                                                    current_throttle-max_change,
-                                                    current_throttle+max_change);
+        
+        bool auto_takeoff = (plane.control_mode == &plane.mode_auto) && plane.mission.get_current_nav_cmd().id == MAV_CMD_NAV_TAKEOFF && (slew_rate_time.get() > 0);
+
+        if (auto_takeoff) {
+            float dt = plane.G_Dt;
+            float slew_pwm = 1000 / slew_rate_time.get();
+            float max_delta = slew_pwm * dt / 1000.0f;  // Convert PWM/s to normalized 0..1 scale
+            float delta = new_throttle - current_throttle;
+
+            if (delta > max_delta) {
+                current_throttle += max_delta;
+            } else if (delta < -max_delta) {
+                current_throttle -= max_delta;
+            } else {
+                current_throttle = new_throttle;
+            }
         } else {
-            current_throttle = new_throttle;
+            // Regular throttle slew using tilt-based rate
+            if (current_tilt < get_fully_forward_tilt()) {
+                current_throttle = constrain_float(new_throttle,
+                                                current_throttle - max_change,
+                                                current_throttle + max_change);
+            } else {
+                current_throttle = new_throttle;
+            }
         }
+
         if (!plane.arming.is_armed_and_safety_off()) {
             current_throttle = 0;
         } else {
             // prevent motor shutdown
             _motors_active = true;
         }
+
         if (!quadplane.motor_test.running) {
             // the motors are all the way forward, start using them for fwd thrust
             const uint32_t mask = is_zero(current_throttle) ? 0U : tilt_mask.get();
             motors->output_motor_mask(current_throttle, mask, plane.rudder_dt);
         }
-
-
-
-
-         bool auto_takeoff = (plane.control_mode == &plane.mode_auto) &&
-                    plane.mission.get_current_nav_cmd().id == MAV_CMD_NAV_TAKEOFF &&
-                    (slew_rate.get() > 0);
-
-    if (auto_takeoff) {
-        float dt = plane.G_Dt;
-        float max_delta = slew_rate.get() * dt;  // max PWM change this loop
-
-        // Loop through all motors in the tiltrotor mask
-        uint16_t pwm_current;
-        for (uint8_t i = 0; i < AP_MOTORS_MAX_NUM_MOTORS; i++) {
-            if ((uint16_t)tilt_mask.get() & (1U << i)) {  // if this motor is tiltable
-                // Get current output PWM for motor i
-                if (SRV_Channels::get_output_pwm((SRV_Channel::Function)(SRV_Channel::k_motor1 + i), pwm_current)) {
-                    float prev = motor_prev[i];
-                    float current = (float)pwm_current;
-                    if (fabsf(prev) < 1e-3f && current > 0.0f){
-                        // Initialize prev to current to avoid large initial jump (e.g. from disarmed to spin)
-                        prev = current;
-                    }
-                    // Limit the change
-                    float delta = current - prev;
-                    if (delta > max_delta) {
-                        current = prev + max_delta;
-                    } else if (delta < -max_delta) {
-                        current = prev - max_delta;
-                    }
-                    // Update the output to the limited value
-                    SRV_Channels::set_output_pwm((SRV_Channel::Function)(SRV_Channel::k_motor1 + i), (uint16_t)current);
-                    motor_prev[i] = current;
-                }
-            }
-        }
-    }
-
-
         return;
-}
+    }
 
     // remember the throttle level we're using for VTOL flight
     float motors_throttle = motors->get_throttle();
