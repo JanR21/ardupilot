@@ -358,6 +358,15 @@ void Plane::one_second_loop()
     }
 
     AP::srv().enable_aux_servos();
+    // COMBO INIT: set_angle once after SRV is live
+    {
+        static bool did_combo_init = false;
+        if (!did_combo_init) {
+            SRV_Channels::set_angle(SRV_Channel::k_tilt_combo_left,  4500);
+            SRV_Channels::set_angle(SRV_Channel::k_tilt_combo_right, 4500);
+            did_combo_init = true;
+        }
+    }
 
     // update notify flags
     AP_Notify::flags.pre_arm_check = arming.pre_arm_checks(false);

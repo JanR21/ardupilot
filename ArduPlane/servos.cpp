@@ -916,6 +916,34 @@ void Plane::set_servos(void)
     throttle_slew_limit();
 
     int8_t min_throttle = 0;
+
+    #if HAL_QUADPLANE_ENABLED
+{
+    // Use already-computed mixer outputs:
+    const bool in_vtol = quadplane.in_vtol_mode();
+
+    // Pull sources in Plane's standard "scaled" units (-4500..+4500)
+    const float ail    = SRV_Channels::get_output_scaled(SRV_Channel::k_aileron);
+    const float tilt_L = SRV_Channels::get_output_scaled(SRV_Channel::k_tiltMotorLeft);   // 75 in your tree
+    const float tilt_R = SRV_Channels::get_output_scaled(SRV_Channel::k_tiltMotorRight);  // 76 in your tree
+
+    // Hard switch (0 = FW → aileron, 1 = VTOL → tilt).
+    // Replace with a ramp if you want smooth blending during transitions.
+    const float blend = in_vtol ? 1.0f : 0.0f;
+
+    float out_L = (1.0f - blend) * ail + blend * tilt_L;
+    float out_R = (1.0f - blend) * ail + blend * tilt_R;
+
+    // Optional: apply your own gains/inverts/slew here if you added params
+    // out_L = left_slew.update(out_L, G_Dt);
+    // out_R = right_slew.update(out_R, G_Dt);
+
+    // Publish scaled outputs for your new functions (the IDs you added in SRV_Channel.h)
+    SRV_Channels::set_output_scaled(SRV_Channel::k_tilt_combo_left,  out_L);   // e.g. 177
+    SRV_Channels::set_output_scaled(SRV_Channel::k_tilt_combo_right, out_R);   // e.g. 178
+}
+#endif
+
 #if AP_ICENGINE_ENABLED
     if (g2.ice_control.allow_throttle_while_disarmed()) {
         min_throttle = MAX(aparm.throttle_min.get(), 0);
