@@ -917,30 +917,29 @@ void Plane::set_servos(void)
 
     int8_t min_throttle = 0;
 
-    #if HAL_QUADPLANE_ENABLED
+#if HAL_QUADPLANE_ENABLED
 {
-    // Use already-computed mixer outputs:
-    const bool in_vtol = quadplane.in_vtol_mode();
+    const bool in_vtol       = quadplane.in_vtol_mode();
+    const bool assisted      = quadplane.in_assisted_flight();
+    const bool in_transition = quadplane.in_frwd_transition();   // <-- correct name
 
-    // Pull sources in Plane's standard "scaled" units (-4500..+4500)
-    const float ail    = SRV_Channels::get_output_scaled(SRV_Channel::k_aileron);
-    const float tilt_L = SRV_Channels::get_output_scaled(SRV_Channel::k_tiltMotorLeft);   // 75 in your tree
-    const float tilt_R = SRV_Channels::get_output_scaled(SRV_Channel::k_tiltMotorRight);  // 76 in your tree
+    // Only in pure fixed-wing; leave VTOL/assisted/transition to stock tilt logic
+    if (!in_vtol && !assisted && !in_transition) {
+        // Aileron in SRV scaled units (-4500..+4500)
+        const float ail = SRV_Channels::get_output_scaled(SRV_Channel::k_aileron);
 
-    // Hard switch (0 = FW → aileron, 1 = VTOL → tilt).
-    // Replace with a ramp if you want smooth blending during transitions.
-    const float blend = in_vtol ? 1.0f : 0.0f;
+        const float gain = 1.0f;     // tune sign/magnitude to match your mechanics
+        float out_L =  gain * ail;   // left pod "up" with left roll
+        float out_R = -gain * ail;   // right pod "down" with left roll
 
-    float out_L = (1.0f - blend) * ail + blend * tilt_L;
-    float out_R = (1.0f - blend) * ail + blend * tilt_R;
+        // (optional) clip, just in case
+        out_L = constrain_float(out_L, -4500.0f, 4500.0f);
+        out_R = constrain_float(out_R, -4500.0f, 4500.0f);
 
-    // Optional: apply your own gains/inverts/slew here if you added params
-    // out_L = left_slew.update(out_L, G_Dt);
-    // out_R = right_slew.update(out_R, G_Dt);
-
-    // Publish scaled outputs for your new functions (the IDs you added in SRV_Channel.h)
-    SRV_Channels::set_output_scaled(SRV_Channel::k_tilt_combo_left,  out_L);   // e.g. 177
-    SRV_Channels::set_output_scaled(SRV_Channel::k_tilt_combo_right, out_R);   // e.g. 178
+        // Write directly to the real tilt functions (75/76)
+        SRV_Channels::set_output_scaled(SRV_Channel::k_tiltMotorLeft,  out_L);   // 75
+        SRV_Channels::set_output_scaled(SRV_Channel::k_tiltMotorRight, out_R);   // 76
+    }
 }
 #endif
 
