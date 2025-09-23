@@ -422,6 +422,7 @@ void Plane::do_winch(const AP_Mission::Mission_Command& cmd){
     gcs().send_text(MAV_SEVERITY_INFO, "Winch command %s", action == 0 ? "STOP" : action == 1 ? "RELEASE" : "RETRACT");
 }
 
+
 /*
   setup servos for idle wiggle mode
   Idle mode is used during balloon launch to keep servos still, apart
@@ -983,8 +984,10 @@ void Plane::set_servos(void)
     // set airbrake outputs
     airbrake_update();
 
-    // set winch outputs
-    winch_update();
+#if AP_WINCH_ENABLED
+    // update winch
+    g2.winch.update();
+#endif
 
     // slew rate limit throttle
     throttle_slew_limit();

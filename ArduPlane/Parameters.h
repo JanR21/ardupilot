@@ -529,6 +529,10 @@ public:
     AP_LandingGear landing_gear;
 #endif
 
+#if AP_WINCH_ENABLED
+    AP_Winch winch;
+#endif
+
 #if AC_PRECLAND_ENABLED
     AC_PrecLand precland;
 #endif

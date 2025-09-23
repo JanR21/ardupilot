@@ -47,6 +47,9 @@
 #include <AP_Beacon/AP_Beacon.h>
 
 #include <AP_AdvancedFailsafe/AP_AdvancedFailsafe.h>
+
+#include <AP_Winch/AP_Winch.h>
+
 #include <APM_Control/APM_Control.h>
 #include <APM_Control/AP_AutoTune.h>
 #include <GCS_MAVLink/GCS_MAVLink.h>    // MAVLink GCS definitions
@@ -997,7 +1000,9 @@ private:
     void do_loiter_time(const AP_Mission::Mission_Command& cmd);
     void do_continue_and_change_alt(const AP_Mission::Mission_Command& cmd);
     void do_altitude_wait(const AP_Mission::Mission_Command& cmd);
+#if AP_WINCH_ENABLED
     void do_winch(const AP_Mission::Mission_Command& cmd);
+#endif
     void do_loiter_to_alt(const AP_Mission::Mission_Command& cmd);
     void do_vtol_takeoff(const AP_Mission::Mission_Command& cmd);
     void do_vtol_land(const AP_Mission::Mission_Command& cmd);

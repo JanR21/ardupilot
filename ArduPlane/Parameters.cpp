@@ -1106,6 +1106,12 @@ const AP_Param::GroupInfo ParametersG2::var_info[] = {
     AP_SUBGROUPINFO(landing_gear, "LGR_", 16, ParametersG2, AP_LandingGear),
 #endif
 
+#if AP_WINCH_ENABLED
+    // @Group: WINCH_
+    // @Path: ../libraries/AP_Winch/AP_Winch.cpp
+    AP_SUBGROUPINFO(winch, "WINCH_", 17, ParametersG2, AP_Winch),
+#endif
+
     // @Param: DSPOILER_CROW_W1
     // @DisplayName: Differential spoiler crow flaps outer weight
     // @Description: This is amount of deflection applied to the two outer surfaces for differential spoilers for flaps to give crow flaps. It is a number from 0 to 100. At zero no crow flaps are applied. A recommended starting value is 25.
@@ -1283,6 +1289,9 @@ ParametersG2::ParametersG2(void) :
 #endif
 #if HAL_SOARING_ENABLED
     ,soaring_controller(plane.TECS_controller, plane.aparm)
+#endif
+#if AP_WINCH_ENABLED
+    ,winch()
 #endif
 {
     AP_Param::setup_object_defaults(this, var_info);
