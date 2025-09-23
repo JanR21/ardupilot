@@ -984,6 +984,9 @@ void Plane::set_servos(void)
     // set airbrake outputs
     airbrake_update();
 
+    // set winch outputs
+    winch_update();
+
 #if AP_WINCH_ENABLED
     // update winch
     g2.winch.update();
