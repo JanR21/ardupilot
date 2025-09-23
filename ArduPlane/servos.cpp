@@ -350,77 +350,6 @@ void Plane::airbrake_update(void)
     // Output to airbrake servo types.
     SRV_Channels::set_output_scaled(SRV_Channel::k_airbrake, airbrake_pc);
 }
-/*setup winch servo output - autonomous control via MAVlink commands 
-PWM max spins on direction, PWM min spins the other direction 
-Controlled by MAV_CMD_DO_WINCH mission commands*/
-
-void Plane::winch_update(void)
-{
-    //Check if winch servo is assigned 
-    if(!SRV_Channels::function_assigned(SRV_Channel::k_winch)){
-        return;
-    }
-
-    uint16_t winch_pwm = 1500;
-
-    //Check for winch commands from mission or MAVLink
-    if(winch_command_active){
-        switch(winch_command){
-            case WinchCommand::WINCH_RELEASE:
-                //Release 
-                winch_pwm = 500; //PWM Max
-                break;
-            case WinchCommand::WINCH_RETRACT:
-                //Retract
-                winch_pwm = 2200; //PWM min
-                break;
-            case WinchCommand::WINCH_STOP:
-            default:
-                //Stop
-                winch_pwm = 1500; //PWM for stop
-                break;
-        }
-        //Clear command after execution
-        winch_command_active = false;
-    }
-    //Set the winch servo output using direct pwm values
-    //500 = release, 1500 stop, 2200 retract
-    SRV_Channels::set_output_pwm(SRV_Channel::k_winch, winch_pwm);
-}
-
-/*handle MAV_CMD_DO_WINCH mission command
-Param1: Action (0=stop, 1=release, 2=retract)
-Duration and rate parameters ignored in simple implementation*/
-
-void Plane::do_winch(const AP_Mission::Mission_Command& cmd){
-    //Parse command parameters
-    uint8_t action = (uint8_t)cmd.p1;
-
-    //Set winch command based on action
-    switch(action){
-        case 0:
-            //stop
-            winch_command = WinchCommand::WINCH_STOP;
-            break;
-        case 1:
-            //release
-            winch_command = WinchCommand::WINCH_RELEASE;
-            break;
-        case 2:
-            //stop
-            winch_command = WinchCommand::WINCH_RETRACT;
-            break;
-        default:
-            //Invalid action, default to stop
-            winch_command = WinchCommand::WINCH_STOP;
-    }
-    //Activate the command
-    winch_command_active = true;
-
-    //for duration-based commands, we could implement a timer here
-    //for now the the command executes once and then stops
-    gcs().send_text(MAV_SEVERITY_INFO, "Winch command %s", action == 0 ? "STOP" : action == 1 ? "RELEASE" : "RETRACT");
-}
 
 
 /*
@@ -983,9 +912,6 @@ void Plane::set_servos(void)
 
     // set airbrake outputs
     airbrake_update();
-
-    // set winch outputs
-    winch_update();
 
 #if AP_WINCH_ENABLED
     // update winch

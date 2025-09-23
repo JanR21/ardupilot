@@ -130,9 +130,11 @@ bool Plane::start_command(const AP_Mission::Mission_Command& cmd)
         do_change_speed(cmd);
         break;
 
+#if AP_WINCH_ENABLED
     case MAV_CMD_DO_WINCH:
         do_winch(cmd);
         break;
+#endif
 
     case MAV_CMD_DO_SET_HOME:
         do_set_home(cmd);
@@ -1346,5 +1348,28 @@ bool Plane::in_auto_mission_id(uint16_t command) const
 {
     return control_mode == &mode_auto && mission.get_current_nav_id() == command;
 }
+
+#if AP_WINCH_ENABLED
+/*
+  handle MAV_CMD_DO_WINCH mission command
+ */
+void Plane::do_winch(const AP_Mission::Mission_Command& cmd)
+{
+    switch (cmd.content.winch.action) {
+        case WINCH_RELAXED:
+            g2.winch.relax();
+            break;
+        case WINCH_RELATIVE_LENGTH_CONTROL:
+            g2.winch.release_length(cmd.content.winch.release_length);
+            break;
+        case WINCH_RATE_CONTROL:
+            g2.winch.set_desired_rate(cmd.content.winch.release_rate);
+            break;
+        default:
+            // do nothing
+            break;
+    }
+}
+#endif
 
 

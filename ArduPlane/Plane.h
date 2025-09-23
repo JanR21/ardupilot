@@ -1000,7 +1000,9 @@ private:
     void do_loiter_time(const AP_Mission::Mission_Command& cmd);
     void do_continue_and_change_alt(const AP_Mission::Mission_Command& cmd);
     void do_altitude_wait(const AP_Mission::Mission_Command& cmd);
+#if AP_WINCH_ENABLED
     void do_winch(const AP_Mission::Mission_Command& cmd);
+#endif
     void do_loiter_to_alt(const AP_Mission::Mission_Command& cmd);
     void do_vtol_takeoff(const AP_Mission::Mission_Command& cmd);
     void do_vtol_land(const AP_Mission::Mission_Command& cmd);
@@ -1172,7 +1174,6 @@ private:
     void set_servos_flaps(void);
     void dspoiler_update(void);
     void airbrake_update(void);
-    void winch_update(void);
     void landing_neutral_control_surface_servos(void);
     void servos_output(void);
     void servos_auto_trim(void);
@@ -1288,11 +1289,6 @@ private:
         ENABLED_PITCH_TARGET
     };
     
-    enum class WinchCommand{
-        WINCH_STOP = 0,
-        WINCH_RELEASE = 1,
-        WINCH_RETRACT = 2
-    };
     enum class AutoTuneAxis {
         ROLL  = 1U <<0,
         PITCH = 1U <<1,
@@ -1306,10 +1302,6 @@ private:
     float roll_in_expo(bool use_dz) const;
     float pitch_in_expo(bool use_dz) const;
     float rudder_in_expo(bool use_dz) const;
-
-    //Winch command control
-    WinchCommand winch_command = WinchCommand::WINCH_STOP;
-    bool winch_command_active = false;
 
     // mode reason for entering previous mode
     ModeReason previous_mode_reason = ModeReason::UNKNOWN;
