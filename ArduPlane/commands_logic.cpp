@@ -130,6 +130,9 @@ bool Plane::start_command(const AP_Mission::Mission_Command& cmd)
         do_change_speed(cmd);
         break;
 
+    case MAV_CMD_DO_WINCH:
+        do_winch(cmd);
+        break;
     case MAV_CMD_DO_SET_HOME:
         do_set_home(cmd);
         break;
