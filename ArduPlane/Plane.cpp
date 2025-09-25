@@ -141,6 +141,9 @@ const AP_Scheduler::Task Plane::scheduler_tasks[] = {
 #if AP_LANDINGGEAR_ENABLED
     SCHED_TASK(landing_gear_update, 5, 50, 159),
 #endif
+#if AP_WINCH_ENABLED
+    SCHED_TASK_CLASS(AP_Winch, &plane.g2.winch, update, 50, 50, 162),
+#endif
 #if AC_PRECLAND_ENABLED
     SCHED_TASK(precland_update, 400, 50, 160),
 #endif
@@ -281,6 +284,12 @@ void Plane::update_logging10(void)
 #if HAL_MOUNT_ENABLED
     if (should_log(MASK_LOG_CAMERA)) {
         camera_mount.write_log();
+    }
+#endif
+
+#if AP_WINCH_ENABLED
+    if (should_log(MASK_LOG_ANY)) {
+        g2.winch.write_log();
     }
 #endif
 }

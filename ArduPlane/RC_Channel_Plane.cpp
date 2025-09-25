@@ -172,6 +172,10 @@ void RC_Channel_Plane::init_aux_function(const RC_Channel::AUX_FUNC ch_option,
     case AUX_FUNC::FW_AUTOTUNE:
     case AUX_FUNC::VFWD_THR_OVERRIDE:
     case AUX_FUNC::PRECISION_LOITER:
+#if AP_WINCH_ENABLED
+    case AUX_FUNC::WINCH_CONTROL:
+    case AUX_FUNC::WINCH_ENABLE:
+#endif
 #if QAUTOTUNE_ENABLED
     case AUX_FUNC::AUTOTUNE_TEST_GAINS:
 #endif
@@ -495,6 +499,26 @@ bool RC_Channel_Plane::do_aux_function(const AuxFuncTrigger &trigger)
         break;
 
 #endif
+
+#if AP_WINCH_ENABLED
+    case AUX_FUNC::WINCH_ENABLE:
+        switch (ch_flag) {
+            case AuxSwitchPos::HIGH:
+                // high switch position stops winch using rate control
+                plane.g2.winch.set_desired_rate(0.0f);
+                break;
+            case AuxSwitchPos::MIDDLE:
+            case AuxSwitchPos::LOW:
+                // all other position relax winch
+                plane.g2.winch.relax();
+                break;
+        }
+        break;
+
+    case AUX_FUNC::WINCH_CONTROL:
+        // do nothing, used to control the rate of the winch and is processed within AP_Winch
+        break;
+#endif  // AP_WINCH_ENABLED
 
     default:
         return RC_Channel::do_aux_function(trigger);

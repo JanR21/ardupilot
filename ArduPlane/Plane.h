@@ -48,6 +48,7 @@
 
 #include <AP_AdvancedFailsafe/AP_AdvancedFailsafe.h>
 
+#include <AP_Winch/AP_Winch_config.h>
 #include <AP_Winch/AP_Winch.h>
 
 #include <APM_Control/APM_Control.h>

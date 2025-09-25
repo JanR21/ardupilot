@@ -870,6 +870,11 @@ MAV_RESULT GCS_MAVLINK_Plane::handle_command_int_packet(const mavlink_command_in
         plane.handle_external_hagl(packet);
         return MAV_RESULT_ACCEPTED;
 #endif
+
+#if AP_WINCH_ENABLED
+    case MAV_CMD_DO_WINCH:
+        return handle_MAV_CMD_DO_WINCH(packet);
+#endif
         
     default:
         return GCS_MAVLINK::handle_command_int_packet(packet, msg);
@@ -1421,3 +1426,39 @@ uint8_t GCS_MAVLINK_Plane::send_available_mode(uint8_t index) const
 
     return mode_count;
 }
+
+#if AP_WINCH_ENABLED
+// send winch status message
+void GCS_MAVLINK_Plane::send_winch_status() const
+{
+    AP_Winch *winch = AP::winch();
+    if (winch == nullptr) {
+        return;
+    }
+    winch->send_status(*this);
+}
+
+MAV_RESULT GCS_MAVLINK_Plane::handle_MAV_CMD_DO_WINCH(const mavlink_command_int_t &packet)
+{
+        // param1 : winch number (ignored)
+        // param2 : action (0=relax, 1=relative length control, 2=rate control). See WINCH_ACTIONS enum.
+        if (!plane.g2.winch.enabled()) {
+            return MAV_RESULT_FAILED;
+        }
+        switch ((uint8_t)packet.param2) {
+        case WINCH_RELAXED:
+            plane.g2.winch.relax();
+            return MAV_RESULT_ACCEPTED;
+        case WINCH_RELATIVE_LENGTH_CONTROL: {
+            plane.g2.winch.release_length(packet.param3);
+            return MAV_RESULT_ACCEPTED;
+        }
+        case WINCH_RATE_CONTROL:
+            plane.g2.winch.set_desired_rate(packet.param4);
+            return MAV_RESULT_ACCEPTED;
+        default:
+            break;
+        }
+        return MAV_RESULT_FAILED;
+}
+#endif  // AP_WINCH_ENABLED

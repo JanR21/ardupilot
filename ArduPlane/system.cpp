@@ -91,6 +91,11 @@ void Plane::init_ardupilot()
     g2.landing_gear.init();
 #endif
 
+#if AP_WINCH_ENABLED
+    // init winch
+    g2.winch.init();
+#endif
+
 #if FENCE_TRIGGERED_PIN > 0
     hal.gpio->pinMode(FENCE_TRIGGERED_PIN, HAL_GPIO_OUTPUT);
     hal.gpio->write(FENCE_TRIGGERED_PIN, 0);

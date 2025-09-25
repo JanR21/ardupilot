@@ -3,6 +3,7 @@
 #include <GCS_MAVLink/GCS.h>
 #include <AP_Logger/AP_Logger.h>
 #include <AP_Airspeed/AP_Airspeed_config.h>
+#include <AP_Winch/AP_Winch_config.h>
 #include "quadplane.h"
 #include "defines.h"
 
@@ -63,6 +64,10 @@ private:
     MAV_RESULT handle_MAV_CMD_DO_MOTOR_TEST(const mavlink_command_int_t &packet);
     MAV_RESULT handle_MAV_CMD_DO_PARACHUTE(const mavlink_command_int_t &packet);
     MAV_RESULT handle_command_DO_VTOL_TRANSITION(const mavlink_command_int_t &packet);
+#if AP_WINCH_ENABLED
+    MAV_RESULT handle_MAV_CMD_DO_WINCH(const mavlink_command_int_t &packet);
+    void send_winch_status() const override;
+#endif
 
     void handle_set_position_target_global_int(const mavlink_message_t &msg);
     void handle_set_position_target_local_ned(const mavlink_message_t &msg);
