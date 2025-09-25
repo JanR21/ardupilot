@@ -1,4 +1,7 @@
 #include "Plane.h"
+#include <AP_Winch/AP_Winch_config.h>
+#include <AP_Winch/AP_Winch.h>
+
 
 /********************************************************************************/
 // Command Event Handlers
@@ -94,11 +97,12 @@ bool Plane::start_command(const AP_Mission::Mission_Command& cmd)
         do_altitude_wait(cmd);
         break;
 
-    case MAV_CMD_DO_WINCH:
     #if AP_WINCH_ENABLED
-        do_winch(cmd);
+        case MAV_CMD_DO_WINCH:
+            do_winch(cmd);
+            return true; // do-commands return immediately
     #endif
-        return true;
+
 
 #if HAL_QUADPLANE_ENABLED
     case MAV_CMD_NAV_VTOL_TAKEOFF:
@@ -281,6 +285,11 @@ bool Plane::verify_command(const AP_Mission::Mission_Command& cmd)        // Ret
     case MAV_CMD_NAV_ALTITUDE_WAIT:
         return mode_auto.verify_altitude_wait(cmd);
 
+#if AP_WINCH_ENABLED
+    case MAV_CMD_DO_WINCH:
+#endif
+
+
 #if HAL_QUADPLANE_ENABLED
     case MAV_CMD_NAV_VTOL_TAKEOFF:
         return quadplane.verify_vtol_takeoff(cmd);
@@ -362,36 +371,36 @@ void Plane::do_RTL(int32_t rtl_altitude_AMSL_cm)
     setup_turn_angle();
 }
 #if AP_WINCH_ENABLED
-static void do_winch(const AP_Mission::Mission_Command& cmd)
+void Plane::do_winch(const AP_Mission::Mission_Command& cmd)
 {
-    auto &winch = plane.g2.winch;
+    AP_Winch* winch = AP::winch();
+    if (winch == nullptr) {
+        gcs().send_text(MAV_SEVERITY_WARNING, "Winch: not available");
+        return;
+    }
 
+    // Action encoding mirrors Copter’s do_winch()
+    // cmd.content.winch.action:
+    //   0: WINCH_RELAXED
+    //   1: WINCH_RELATIVE_LENGTH_CONTROL (use cmd.content.winch.release_length, meters)
+    //   2: WINCH_RATE_CONTROL (use cmd.content.winch.release_rate, m/s)
     switch (cmd.content.winch.action) {
-    case WINCH_RELAXED:
-        winch.relax();
-        plane.gcs().send_text(MAV_SEVERITY_INFO, "Winch: relaxed");
-        break;
-
-    case WINCH_RELATIVE_LENGTH_CONTROL:
-        // param: release_length (meters)
-        winch.release_length(cmd.content.winch.release_length);
-        plane.gcs().send_text(MAV_SEVERITY_INFO, "Winch: length %.2fm",
-                              double(cmd.content.winch.release_length));
-        break;
-
-    case WINCH_RATE_CONTROL:
-        // param: release_rate (m/s), positive lets out, negative reels in
-        winch.set_desired_rate(cmd.content.winch.release_rate);
-        plane.gcs().send_text(MAV_SEVERITY_INFO, "Winch: rate %.2fm/s",
-                              double(cmd.content.winch.release_rate));
-        break;
-
-    default:
-        plane.gcs().send_text(MAV_SEVERITY_WARNING, "Winch: unknown action");
-        break;
+        case 0: // WINCH_RELAXED
+            winch->relax();
+            break;
+        case 1: // WINCH_RELATIVE_LENGTH_CONTROL
+            winch->release_length(cmd.content.winch.release_length);
+            break;
+        case 2: // WINCH_RATE_CONTROL
+            winch->set_desired_rate(cmd.content.winch.release_rate);
+            break;
+        default:
+            // ignore
+            break;
     }
 }
 #endif
+
 
 
 Location Plane::calc_best_rally_or_home_location(const Location &_current_loc, float rtl_home_alt_amsl_cm) const

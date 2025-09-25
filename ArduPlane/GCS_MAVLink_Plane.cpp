@@ -4,6 +4,8 @@
 #include <AP_RPM/AP_RPM_config.h>
 #include <AP_Airspeed/AP_Airspeed_config.h>
 #include <AP_EFI/AP_EFI_config.h>
+#include <AP_Winch/AP_Winch_config.h>
+#include <AP_Winch/AP_Winch.h>
 
 MAV_TYPE GCS_Plane::frame_type() const
 {
@@ -777,37 +779,40 @@ MAV_RESULT GCS_MAVLINK_Plane::handle_command_int_packet(const mavlink_command_in
     case MAV_CMD_DO_CHANGE_ALTITUDE:
         return handle_command_int_DO_CHANGE_ALTITUDE(packet);
 
-        case MAV_CMD_DO_WINCH:
 #if AP_WINCH_ENABLED
-    {
-        // We use param2..4 to match the common ArduPilot mapping used in Copter:
-        //  param2 = action (0=RELAXED, 1=RELATIVE_LENGTH_CONTROL, 2=RATE_CONTROL)
-        //  param3 = release_length (m)   [if action==1]
-        //  param4 = release_rate  (m/s)  [if action==2]
-        const uint8_t action = uint8_t(packet.param2);
-        const float length_m = packet.param3;
-        const float rate_mps = packet.param4;
+    case MAV_CMD_DO_WINCH: {
+        // Mission Planner sends PARAMs as floats; action is in param1
+        // ArduPilot's AP_Mission also uses the same enum values Copter does:
+        //   WINCH_RELAXED = 0
+        //   WINCH_RELATIVE_LENGTH_CONTROL = 1
+        //   WINCH_RATE_CONTROL = 2
+        const int action = (int)packet.param1;
 
-        auto &winch = plane.g2.winch;
+        AP_Winch* winch = AP::winch();
+        if (winch == nullptr) {
+            gcs().send_text(MAV_SEVERITY_WARNING, "Winch: not available");
+            return MAV_RESULT_FAILED;
+        }
 
         switch (action) {
-        case WINCH_RELAXED:
-            winch.relax();
-            break;
-        case WINCH_RELATIVE_LENGTH_CONTROL:
-            winch.release_length(length_m);
-            break;
-        case WINCH_RATE_CONTROL:
-            winch.set_desired_rate(rate_mps);
-            break;
-        default:
-            return MAV_RESULT_DENIED; // bad action
+            case 0: // WINCH_RELAXED
+                winch->relax();
+                return MAV_RESULT_ACCEPTED;
+
+            case 1: // WINCH_RELATIVE_LENGTH_CONTROL
+                // param2: release_length (meters); positive = release, negative = retract
+                winch->release_length(packet.param2);
+                return MAV_RESULT_ACCEPTED;
+
+            case 2: // WINCH_RATE_CONTROL
+                // param3: release_rate (m/s); positive = release, negative = retract
+                winch->set_desired_rate(packet.param3);
+                return MAV_RESULT_ACCEPTED;
         }
-        return MAV_RESULT_ACCEPTED;
+        return MAV_RESULT_DENIED;
     }
-#else
-        return MAV_RESULT_UNSUPPORTED;
 #endif
+
 
 
 #if AP_PLANE_OFFBOARD_GUIDED_SLEW_ENABLED
