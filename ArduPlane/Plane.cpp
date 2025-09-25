@@ -288,7 +288,7 @@ void Plane::update_logging10(void)
 #endif
 
 #if AP_WINCH_ENABLED
-    if (should_log(MASK_LOG_ANY)) {
+    if (should_log(MASK_LOG_ATTITUDE_MED)) {
         g2.winch.write_log();
     }
 #endif

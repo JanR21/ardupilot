@@ -7,3 +7,6 @@ include hwdef.inc
 
 # build ABIN for flash-from-bootloader support:
 env BUILD_ABIN True
+
+# Force enable winch functionality
+define AP_WINCH_ENABLED 1

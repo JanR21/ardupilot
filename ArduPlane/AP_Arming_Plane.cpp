@@ -251,8 +251,9 @@ bool AP_Arming_Plane::ins_checks(bool display_failure)
 
 #if AP_WINCH_ENABLED
     // winch pre-arm checks
-    if (!plane.g2.winch.pre_arm_check(failure_msg, ARRAY_SIZE(failure_msg))) {
-        check_failed(Check::PARAMETERS, display_failure, "Winch: %s", failure_msg);
+    char winch_failure_msg[50] = {};
+    if (!plane.g2.winch.pre_arm_check(winch_failure_msg, ARRAY_SIZE(winch_failure_msg))) {
+        check_failed(Check::PARAMETERS, display_failure, "Winch: %s", winch_failure_msg);
         return false;
     }
 #endif
