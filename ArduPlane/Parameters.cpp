@@ -53,6 +53,10 @@ const AP_Param::Info Plane::var_info[] = {
     // @User: Standard
     GSCALAR(kff_rudder_mix,         "KFF_RDDRMIX",    RUDDER_MIX),
 
+
+    //WINCH FUNCTION PROTOTYPE
+    GSCALAR(winch_enable, "WINCH_ENABLE",    0),
+
     // @Param: KFF_THR2PTCH
     // @DisplayName: Throttle to Pitch Mix
     // @Description: Pitch up to add in proportion to throttle. 100% throttle will add this number of degrees to the pitch target.

@@ -135,6 +135,7 @@ public:
         k_param_override_channel,
         k_param_stall_prevention,
         k_param_optflow,
+        k_param_winch_enable,
         k_param_cli_enabled_old, // unused - CLI removed
         k_param_trim_rc_at_start, // unused
         k_param_hil_mode_unused,  // unused
@@ -447,6 +448,7 @@ public:
     AP_Float RTL_altitude;
     AP_Float pitch_trim;
     AP_Float cruise_alt_floor;
+    AP_Int8 winch_enable;
 
     AP_Int8 flap_1_percent;
     AP_Int8 flap_1_speed;
